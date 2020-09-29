@@ -1,49 +1,24 @@
 
-<!--attribute means input-->
-<!--uniform means constant can't be modified -->
-<script id="vertex-shader-2d"
-        type="x-shader/x-vertex">
-    attribute vec2 a_coords;
-    uniform   vec2 u_resolution;
-
-    void main() {
-    vec2 zeroToOne = a_coords / u_resolution;
-    vec2 zeroToTwo = zeroToOne * 2.0;
-    vec2 minusOneToOne = zeroToTwo - 1.0;
-    vec2 clipSpace = minusOneToOne * vec2(1, -1);
-    gl_Position = vec4(clipSpace, 0, 1);
-}
-</script>
-
-<script id="fragment-shader-2d" type="x-shader/x-fragment">
-    precision mediump float;
-    uniform vec4 u_color;
-    void main() {
-    gl_FragColor = u_color;
-}
-</script>
-
-<script>
-    const hexToRgb = (hex) => {
+const hexToRgb = (hex) => {
     let parseRgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     let rgb = {
-    red:   parseInt(parseRgb[1], 16),
-    green: parseInt(parseRgb[2], 16),
-    blue:  parseInt(parseRgb[3], 16)
-}
+        red:   parseInt(parseRgb[1], 16),
+        green: parseInt(parseRgb[2], 16),
+        blue:  parseInt(parseRgb[3], 16)
+    }
     rgb.red /= 256
     rgb.green /= 256
     rgb.blue /= 256
     return rgb
 }
 
-    const RED_HEX = "#FF0000"
-    const RED_RGB = hexToRgb(RED_HEX)
-    const BLUE_HEX = "#0000FF"
-    const BLUE_RGB = hexToRgb(BLUE_HEX)
+const RED_HEX = "#FF0000"
+const RED_RGB = hexToRgb(RED_HEX)
+const BLUE_HEX = "#0000FF"
+const BLUE_RGB = hexToRgb(BLUE_HEX)
 
-    // now gpu knows what to do with things above
-    const createProgramFromScripts = (gl, vertexShaderElementId, fragmentShaderElementId) => {
+// now gpu knows what to do with things above
+const createProgramFromScripts = (gl, vertexShaderElementId, fragmentShaderElementId) => {
     // Get the strings for our GLSL shaders
     const vertexShaderSource   = document.querySelector(vertexShaderElementId).text;
     const fragmentShaderSource = document.querySelector(fragmentShaderElementId).text;
@@ -65,62 +40,62 @@
 
     return program
 }
-    // rectangle type shapes
-    const RECTANGLE = "RECTANGLE"
-    let shapes = [
+
+const RECTANGLE = "RECTANGLE"
+const TRIANGLE = "TRIANGLE"
+let shapes = [
     {
         type: RECTANGLE,
         position: {
-        x: 200,
-        y: 100
-    },
+            x: 200,
+            y: 100
+        },
         dimensions: {
-        width:  50,
-        height: 50
-    },
+            width:  50,
+            height: 50
+        },
         color: {
-        red: BLUE_RGB.red,
-        green: BLUE_RGB.green,
-        blue: BLUE_RGB.blue
-    }
-    }
-    ]
-
-    // triangle type shapes
-    const TRIANGLE = "TRIANGLE"
-    let shapes = [
-    { type: RECTANGLE, ... },
+            red: BLUE_RGB.red,
+            green: BLUE_RGB.green,
+            blue: BLUE_RGB.blue
+        }
+    },
     {
         type: TRIANGLE,
         position: {
-        x: 300,
-        y: 100
-    },
+            x: 300,
+            y: 100
+        },
         dimensions: {
-        width: 50,
-        height: 50
-    },
+            width: 50,
+            height: 50
+        },
         color: {
-        red: RED_RGB.red,
-        green: RED_RGB.blue,
-        blue: RED_RGB.green
+            red: RED_RGB.red,
+            green: RED_RGB.blue,
+            blue: RED_RGB.green
+        }
     }
-    }
-    ]
-    // next cope with the input variables
-    let gl
-    let attributeCoords
-    let uniformColor
-    let bufferCoords
+]
 
-    const init = () => {
+// next cope with the input variables
+let gl
+let attributeCoords
+let uniformColor
+let bufferCoords
+
+const init = () => {
     // get a reference to the canvas and WebGL context
     const canvas = document.querySelector("#canvas");
-    gl = canvas.getContext("webgl");
 
+    gl = canvas.getContext("webgl");
+    canvas.addEventListener(
+        "mousedown",
+        doMouseDown,
+        false);
     // create and use a GLSL program
     const program = createProgramFromScripts(gl,
-    "#vertex-shader-2d", "#fragment-shader-2d");
+        "#vertex-shader-2d", "#fragment-shader-2d");
     gl.useProgram(program);
 
     // get reference to GLSL attributes and uniforms
@@ -141,93 +116,139 @@
     gl.clear(gl.COLOR_BUFFER_BIT);
 }
 
-    const render = () => {
-    gl.bindBuffer(gl.ARRAY_BUFFER, bufferCoords);
+const doMouseDown = (event) => {
+    const boundingRectangle = canvas.getBoundingClientRect();
+    const x = event.clientX - boundingRectangle.left;
+    const y = event.clientY - boundingRectangle.top;
+    const center = {position: {x, y}}
+    const shape = document.querySelector("input[name='shape']:checked").value
+
+    if (shape === "RECTANGLE") {
+        addRectangle(center)
+    } else if (shape === "TRIANGLE") {
+        addTriangle(center)
+    }
+}
+
+
+const render = () => {
+    gl.bindBuffer(gl.ARRAY_BUFFER,
+        bufferCoords);
     gl.vertexAttribPointer(
-    attributeCoords, 2, gl.FLOAT, false, 0, 0);
+        attributeCoords,
+        2,
+        gl.FLOAT,
+        false,
+        0,
+
+        0);
 
     shapes.forEach(shape => {
-    gl.uniform4f(uniformColor,
-    shape.color.red,
-    shape.color.green,
-    shape.color.blue, 1);
+        gl.uniform4f(uniformColor,
+            shape.color.red,
+            shape.color.green,
+            shape.color.blue, 1);
 
-    if(shape.type === RECTANGLE) {
-    renderRectangle(shape)
-} else if(shape.type == TRIANGLE) {
-    renderTriangle(shape)
-}
-})
+        if(shape.type === RECTANGLE) {
+            renderRectangle(shape)
+        } else if(shape.type === TRIANGLE) {
+            renderTriangle(shape)
+        }
+    })
 }
 
-    const renderRectangle = (rectangle) => {
+const renderRectangle = (rectangle) => {
     const x1 = rectangle.position.x
-    - rectangle.dimensions.width/2;
+        - rectangle.dimensions.width/2;
     const y1 = rectangle.position.y
-    - rectangle.dimensions.height/2;
+        - rectangle.dimensions.height/2;
     const x2 = rectangle.position.x
-    + rectangle.dimensions.width/2;
+        + rectangle.dimensions.width/2;
     const y2 = rectangle.position.y
-    + rectangle.dimensions.height/2;
+        + rectangle.dimensions.height/2;
 
     const float32Array = new Float32Array([
-    x1, y1, x2, y1, x1, y2,
-    x1, y2, x2, y1, x2, y2,
+        x1, y1, x2, y1, x1, y2,
+        x1, y2, x2, y1, x2, y2,
     ])
 
     gl.bufferData(gl.ARRAY_BUFFER, float32Array, gl.STATIC_DRAW);
+
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
-    const renderTriangle = (triangle) => {
+
+const renderTriangle = (triangle) => {
     const x1 = triangle.position.x
-    - triangle.dimensions.width / 2
+        - triangle.dimensions.width / 2
     const y1 = triangle.position.y
-    + triangle.dimensions.height / 2
+        + triangle.dimensions.height / 2
     const x2 = triangle.position.x
-    + triangle.dimensions.width / 2
+        + triangle.dimensions.width / 2
     const y2 = triangle.position.y
-    + triangle.dimensions.height / 2
+        + triangle.dimensions.height / 2
     const x3 = triangle.position.x
     const y3 = triangle.position.y
-    - triangle.dimensions.height / 2
+        - triangle.dimensions.height / 2
 
     const float32Array = new Float32Array([
-    x1, y1,   x2, y2,   x3, y3
+        x1, y1,   x2, y2,   x3, y3
     ])
 
     gl.bufferData(gl.ARRAY_BUFFER,
-    float32Array, gl.STATIC_DRAW);
+        float32Array, gl.STATIC_DRAW);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
-    const addRectangle = () => {
+
+const addRectangle = (center) => {
     let x = parseInt(document
-    .getElementById("x").value)
+        .getElementById("x").value)
     let y = parseInt(document
-    .getElementById("y").value)
+        .getElementById("y").value)
     const width = parseInt(document
-    .getElementById("width").value)
+        .getElementById("width").value)
     const height = parseInt(document
-    .getElementById("height").value)
-
+        .getElementById("height").value)
+    const colorHex = document.getElementById("color").value
+    const colorRgb = hexToRgb(colorHex)
+    if (center) {
+        x = center.position.x
+        y = center.position.y
+    }
     const rectangle = {
-    type: RECTANGLE,
-    position: {
-    "x": x,
-    y: y
-},
-    dimensions: {
-    width,
-    height
-},
-    color: {
-    red: Math.random(),
-    green: Math.random(),
-    blue: Math.random()
-}
-}
-
+        type: RECTANGLE,
+        position: {
+            "x": x,
+            y: y
+        },
+        dimensions: {
+            width,
+            height
+        },
+        color: colorRgb
+    }
     shapes.push(rectangle)
     render()
 }
-</script>
+
+const addTriangle = (center) => {
+    let x = parseInt(document.getElementById("x").value)
+    let y = parseInt(document.getElementById("y").value)
+    const colorHex = document.getElementById("color").value
+    const colorRgb = hexToRgb(colorHex)
+    const width = parseInt(document.getElementById("width").value)
+    const height = parseInt(document.getElementById("height").value)
+    if (center) {
+        x = center.position.x
+        y = center.position.y
+    }
+    const triangle = {
+        type: TRIANGLE,
+        position: {x, y},
+        dimensions: {width, height},
+        color: colorRgb
+    }
+    shapes.push(triangle)
+    render()
+}
+
