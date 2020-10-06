@@ -1,103 +1,38 @@
 
-const hexToRgb = (hex) => {
-    let parseRgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    let rgb = {
-        red:   parseInt(parseRgb[1], 16),
-        green: parseInt(parseRgb[2], 16),
-        blue:  parseInt(parseRgb[3], 16)
-    }
-    rgb.red /= 256
-    rgb.green /= 256
-    rgb.blue /= 256
-    return rgb
-}
-
 const RED_HEX = "#FF0000"
-const RED_RGB = hexToRgb(RED_HEX)
+const RED_RGB = webglUtils.hexToRgb(RED_HEX)
 const BLUE_HEX = "#0000FF"
-const BLUE_RGB = hexToRgb(BLUE_HEX)
-
-// now gpu knows what to do with things above
-const createProgramFromScripts = (gl, vertexShaderElementId, fragmentShaderElementId) => {
-    // Get the strings for our GLSL shaders
-    const vertexShaderSource   = document.querySelector(vertexShaderElementId).text;
-    const fragmentShaderSource = document.querySelector(fragmentShaderElementId).text;
-
-    // Create GLSL shaders, upload the GLSL source, compile the shaders
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShader, vertexShaderSource);
-    gl.compileShader(vertexShader);
-
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
-    gl.compileShader(fragmentShader);
-
-    // Link the two shaders into a program
-    const program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-
-    return program
-}
-
+const BLUE_RGB = webglUtils.hexToRgb(BLUE_HEX)
 const RECTANGLE = "RECTANGLE"
 const TRIANGLE = "TRIANGLE"
-const CIRCLE = "CIRCLE"
 
+const origin = {x: 0, y: 0}
+const sizeOne = {width: 1, height: 1}
 let shapes = [
     {
         type: RECTANGLE,
-        position: {
-            x: 200,
-            y: 100
-        },
-        dimensions: {
-            width:  50,
-            height: 50
-        },
-        color: {
-            red: BLUE_RGB.red,
-            green: BLUE_RGB.green,
-            blue: BLUE_RGB.blue
-        }
+        position: origin,
+        dimensions: sizeOne,
+        color: BLUE_RGB,
+        translation: {x: 200, y: 100},
+        rotation: {z: 0},
+        scale: {x: 50, y: 50}
     },
     {
         type: TRIANGLE,
-        position: {
-            x: 300,
-            y: 100
-        },
-        dimensions: {
-            width: 50,
-            height: 50
-        },
-        color: {
-            red: RED_RGB.red,
-            green: RED_RGB.blue,
-            blue: RED_RGB.green
-        }
-    },
-    {
-        type: CIRCLE,
-        position: {
-            x: 400,
-            y: 100
-        },
-        dimensions: {
-            r: 25
-        },
-        color: {
-            red: BLUE_RGB.red,
-            green: BLUE_RGB.green,
-            blue: BLUE_RGB.blue
-        }
+        position: origin,
+        dimensions: sizeOne,
+        color: RED_RGB,
+        translation: {x: 300,y: 100},
+        rotation: {z: 0},
+        scale: {x: 50, y: 50}
     }
 ]
 
 // next cope with the input variables
 let gl
 let attributeCoords
+let uniformMatrix
 let uniformColor
 let bufferCoords
 
@@ -111,18 +46,15 @@ const init = () => {
         doMouseDown,
         false);
     // create and use a GLSL program
-    const program = createProgramFromScripts(gl,
+    const program = webglUtils.createProgramFromScripts(gl,
         "#vertex-shader-2d", "#fragment-shader-2d");
     gl.useProgram(program);
 
     // get reference to GLSL attributes and uniforms
     attributeCoords = gl.getAttribLocation(program, "a_coords");
+    uniformMatrix = gl.getUniformLocation(program, "u_matrix");
     const uniformResolution = gl.getUniformLocation(program, "u_resolution");
     uniformColor = gl.getUniformLocation(program, "u_color");
-
-    // attributeVPosition = gl.getAttribLocation(program, "vPosition");
-    // const uniformTheta = gl.getUniform(program, "theta"); //
-
 
     // initialize coordinate attribute to send each vertex to GLSL program
     gl.enableVertexAttribArray(attributeCoords);
@@ -135,6 +67,18 @@ const init = () => {
     gl.uniform2f(uniformResolution, gl.canvas.width, gl.canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    document.getElementById("tx").onchange = event => updateTranslation(event, "x")
+    // TODO: do the same for the Y axis
+    document.getElementById("ty").onchange = event => updateTranslation(event, "y")
+
+    document.getElementById("sx").onchange = event => updateScale(event, "x")
+    // TODO: do the same for the Y axis
+    document.getElementById("sy").onchange = event => updateScale(event, "y")
+
+    document.getElementById("rz").onchange = event => updateRotation(event, "z")
+
+    document.getElementById("color").onchange = event => updateColor(event)
 }
 
 const doMouseDown = (event) => {
@@ -164,7 +108,25 @@ const render = () => {
 
         0);
 
-    shapes.forEach(shape => {
+    shapes.forEach(shape=> {
+        // gl.uniform4f(uniformColor,
+        //     shape.color.red,
+        //     shape.color.green,
+        //     shape.color.blue, 1);
+        //
+        // if(shape.type === RECTANGLE) {
+        //     renderRectangle(shape)
+        // } else if(shape.type === TRIANGLE) {
+        //     renderTriangle(shape)
+        // }
+        // compute transformation matrix
+        let matrix = m3.projection(gl.canvas.clientWidth, gl.canvas.clientHeight);
+        matrix = m3.translate(matrix, shape.translation.x, shape.translation.y);
+        matrix = m3.rotate(matrix, shape.rotation.z);
+        matrix = m3.scale(matrix, shape.scale.x, shape.scale.y);
+
+        // apply transformation matrix.
+        gl.uniformMatrix3fv(uniformMatrix, false, matrix);
         gl.uniform4f(uniformColor,
             shape.color.red,
             shape.color.green,
@@ -174,8 +136,6 @@ const render = () => {
             renderRectangle(shape)
         } else if(shape.type === TRIANGLE) {
             renderTriangle(shape)
-        } else if(shape.type === CIRCLE) {
-            renderCircle(shape)
         }
     })
 }
@@ -212,6 +172,7 @@ const renderTriangle = (triangle) => {
     const x3 = triangle.position.x
     const y3 = triangle.position.y
         - triangle.dimensions.height / 2
+
     const float32Array = new Float32Array([
         x1, y1,   x2, y2,   x3, y3
     ])
@@ -222,37 +183,6 @@ const renderTriangle = (triangle) => {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 }
 
-const renderCircle = (circle) => {
-    for(var th = 0.0; th <90; th += 0.1) {
-        const sin = 10*Math.sin(th);
-        const cos = 10*Math.cos(th);
-        vertices[0] = vec2(sin, cos);
-        vertices[1] = vec2(sin, -cos);
-        vertices[2] = vec2(-sin, -cos);
-        vertices[3] = vec2(-sin, cos);
-        const float32Array = new Float32Array([
-            x1, y1,   x2, y2,   x3, y3
-        ])
-
-        gl.bufferData(gl.ARRAY_BUFFER,
-            float32Array, gl.STATIC_DRAW);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        //gl.bufferSubData( … )
-        render();
-    }
-}
-// const renderCircle = (circle) => {
-//     var theta =
-//         gl.getUniformLocation(program, "theta");
-//     let thetaLocal = 0.0;
-//     function render() {
-//         gl.clear(gl.COLOR_BUFFER_BIT);
-//         thetaLocal += 0.1;
-//         gl.uniform1f(theta, thetaLocal);
-//         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-//         render();
-//     }
-// }
 const addRectangle = (center) => {
     let x = parseInt(document
         .getElementById("x").value)
@@ -305,17 +235,45 @@ const addTriangle = (center) => {
     render()
 }
 
-var theta =
-    gl.getUniformLocation(program, "theta");
-const program2 = createProgramFromScripts(gl,
-    "#vertex-shader-circle", "#fragment-shader-2d");
-gl.useProgram(program);
-let thetaLocal = 0.0;
-function render() {
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    thetaLocal += 0.1;
-    gl.uniform1f(theta, thetaLocal);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+let selectedShapeIndex = 0
+
+const updateTranslation = (event, axis) => {
+    const value = event.target.value
+    shapes[selectedShapeIndex].translation[axis] = value
+    // shapes.forEach(shape => {
+    //     shape.translation[axis] = shape.translation[axis] + value
+    // })
+    render();
+}
+
+const updateScale = (event, axis) => {
+    // TODO: update the shapes scale property
+    const value = event.target.value
+    shapes.forEach(shape => {
+        shape.scale[axis] = value
+    })
+    render()
+    // shapes[selectedShapeIndex].scale[axis] = value
+}
+
+const updateRotation = (event, axis) => {
+    const value = event.target.value
+    const angleInDegrees = (360 - value) * Math.PI / 180;
+    shapes.forEach(shape => {
+        shape.rotation[axis] = angleInDegrees
+    })
+    // shapes[selectedShapeIndex].rotation[axis] = angleInDegrees
+    render();
+}
+
+const updateColor = (event) => {
+    // TODO: update the color of the shape.
+    // Use webglUtils.hexToRgb to convert hex color to rgb
+    const colorHex = document.getElementById("color").value
+    // const value = webglUtils.hexToRgb(event.color)
+    shapes.forEach(shape => {
+        shape.color = webglUtils.hexToRgb(colorHex)
+    })
     render();
 }
 

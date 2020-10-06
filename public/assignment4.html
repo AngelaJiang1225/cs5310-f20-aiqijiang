@@ -1,10 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <title>A WebGL Mini CAD</title>
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+    <style>
+        canvas {
+            border: 1px solid gray;
+        }
+    </style>
 </head>
-<body>
-$END$
+<body onload="init();render()">
+<div class="container">
+    <h1>A WebGL Mini CAD</h1>
+    <canvas id="canvas"
+            width="500px"
+            height="300px">
+    </canvas>
+    <h2>Translation</h2>
+    X: <input id="tx" type="number" value="0" step="5"/><br/>
+    <!-- TODO: do the same for the Y axis-->
+    Y: <input id="ty" type="number" value="0" step="5"/><br/>
+
+    <h2>Scaling</h2>
+    X: <input id="sx" type="number" value="1" step="0.5"/><br/>
+    <!-- TODO: do the same for the Y axis-->
+    Y: <input id="sy" type="number" value="1" step="0.5"/><br/>
+
+
+    <h2>Rotation</h2>
+    Z: <input id="rz" type="number" value="0" step="2"/><br/>
+
+
+    <h2>Color</h2>
+    <input id="color" type="color"><br/>
+
+<!--    <label>-->
+<!--        <input type="radio" name="shape"-->
+<!--               value="TRIANGLE"/>-->
+<!--        Triangle-->
+<!--    </label>-->
+</div>
+
+<script src="m3.js" type="application/javascript"></script>
+<script src="webgl-utils.js" type="application/javascript"></script>
+<!--attribute means input-->
+<!--uniform means constant can't be modified -->
+<script id="vertex-shader-2d" type="x-shader/x-vertex">
+ attribute vec2 a_coords;
+ uniform mat3 u_matrix;
+ void main() {
+  // multiply coordinates by a transformation matrix
+  gl_Position = vec4((u_matrix * vec3(a_coords, 1)).xy, 0, 1);
+ }
+</script>
+<script id="fragment-shader-2d" type="x-shader/x-fragment">
+ precision mediump float;
+ uniform vec4 u_color;
+ void main() {
+   gl_FragColor = u_color;
+ }
+</script>
+<script type="text/javascript" src="assignment4.js"></script>
 </body>
 </html>
