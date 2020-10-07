@@ -79,20 +79,22 @@ const init = () => {
     document.getElementById("rz").onchange = event => updateRotation(event, "z")
 
     document.getElementById("color").onchange = event => updateColor(event)
+    selectShape(0)
 }
 
 const doMouseDown = (event) => {
     const boundingRectangle = canvas.getBoundingClientRect();
     const x = event.clientX - boundingRectangle.left;
     const y = event.clientY - boundingRectangle.top;
-    const center = {position: {x, y}}
+    const translation = {x, y}
+    // const center = {position: {x, y}}
     const shape = document.querySelector("input[name='shape']:checked").value
-
-    if (shape === "RECTANGLE") {
-        addRectangle(center)
-    } else if (shape === "TRIANGLE") {
-        addTriangle(center)
-    }
+    // if (shape === "RECTANGLE") {
+    //     addRectangle(center)
+    // } else if (shape === "TRIANGLE") {
+    //     addTriangle(center)
+    // }
+    addShape(translation, shape)
 }
 
 
@@ -108,7 +110,29 @@ const render = () => {
 
         0);
 
-    shapes.forEach(shape=> {
+    const $shapeList = $("#object-list")
+    $shapeList.empty()
+    shapes.forEach((shape, index)=> {
+        const $li = $(`
+             <li>
+                <button onclick="deleteShape(${index})">
+                    Delete
+                </button>
+                <label>
+                    <input
+                     type="radio"
+                     id="${shape.type}-${index}"
+                     name="shape-index"
+                     ${index === selectedShapeIndex ? "checked": ""}
+                     onclick="selectShape(${index})"
+                     value="${index}"/>
+                     ${shape.type};
+                     X: ${shape.translation.x};
+                     Y: ${shape.translation.y}
+               </label>
+             </li>
+           `)
+        $shapeList.append($li)
         // gl.uniform4f(uniformColor,
         //     shape.color.red,
         //     shape.color.green,
@@ -276,4 +300,50 @@ const updateColor = (event) => {
     })
     render();
 }
+
+const addShape = (translation, type) => {
+    const colorHex = document.getElementById("color").value
+    const colorRgb = webglUtils.hexToRgb(colorHex)
+    let tx = 0
+    let ty = 0
+    if (translation) {
+        tx = translation.x
+        ty = translation.y
+    }
+    const shape = {
+        type: type,
+        position: origin,
+        dimensions: sizeOne,
+        color: colorRgb,
+        translation: {x: tx, y: ty, z: 0},
+        rotation: {x: 0, y: 0, z: 0},
+        scale: {x: 20, y: 20, z: 20}
+    }
+    shapes.push(shape)
+    render()
+}
+
+const selectShape = (selectedIndex) => {
+    selectedShapeIndex = selectedIndex
+    document.getElementById("tx").value = shapes[selectedIndex].translation.x
+    document.getElementById("ty").value = shapes[selectedIndex].translation.y
+    // TODO: update the scale and rotation fields
+    document.getElementById("sx").value = shapes[selectedIndex].scale.x
+    // TODO: do the same for the Y axis
+    document.getElementById("sy").value = shapes[selectedIndex].scale.y
+
+    document.getElementById("rz").value = shapes[selectedIndex].rotation.z
+    const hexColor = webglUtils.rgbToHex(shapes[selectedIndex].color)
+    document.getElementById("color").value = hexColor
+}
+const deleteShape = (shapeIndex) => {
+    shapes.splice(shapeIndex, 1)
+    render()
+}
+// todo: renderCircle, refactor render()
+
+
+
+
+
 
