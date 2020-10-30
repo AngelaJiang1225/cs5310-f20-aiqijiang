@@ -43,6 +43,7 @@ const createProgramFromScripts = (gl, vertexShaderElementId, fragmentShaderEleme
 
 const RECTANGLE = "RECTANGLE"
 const TRIANGLE = "TRIANGLE"
+const CIRCLE = "CIRCLE"
 let shapes = [
     {
         type: RECTANGLE,
@@ -69,6 +70,21 @@ let shapes = [
         dimensions: {
             width: 50,
             height: 50
+        },
+        color: {
+            red: RED_RGB.red,
+            green: RED_RGB.blue,
+            blue: RED_RGB.green
+        }
+    },
+    {
+        type: CIRCLE,
+        position: {
+            x: 100,
+            y: 100
+        },
+        dimensions: {
+            radius: 30
         },
         color: {
             red: RED_RGB.red,
@@ -127,6 +143,8 @@ const doMouseDown = (event) => {
         addRectangle(center)
     } else if (shape === "TRIANGLE") {
         addTriangle(center)
+    } else if(shape === "CIRCLE") {
+        addCircle(center)
     }
 }
 
@@ -153,6 +171,8 @@ const render = () => {
             renderRectangle(shape)
         } else if(shape.type === TRIANGLE) {
             renderTriangle(shape)
+        } else if(shape.type === CIRCLE) {
+            renderCircle(shape)
         }
     })
 }
@@ -198,6 +218,26 @@ const renderTriangle = (triangle) => {
         float32Array, gl.STATIC_DRAW);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+
+const renderCircle = (circle) => {
+    const N = 100;
+    const vertexData = [];
+    const r = circle.dimensions.radius
+    const x = circle.position.x
+    const y = circle.position.y
+
+    for (let i = 0; i < N; i++) {
+        let theta = i * 2 * Math.PI / N;
+        vertexData.push(x+r * Math.cos(theta));
+        vertexData.push(y+r * Math.sin(theta));
+    }
+
+    const vertices = new Float32Array(vertexData);
+    gl.bufferData(gl.ARRAY_BUFFER,
+        vertices, gl.STATIC_DRAW);
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, N);
 }
 
 const addRectangle = (center) => {
@@ -252,3 +292,24 @@ const addTriangle = (center) => {
     render()
 }
 
+const addCircle = (center) => {
+    let x = parseInt(document.getElementById("x").value)
+    let y = parseInt(document.getElementById("y").value)
+    const colorHex = document.getElementById("color").value
+    const colorRgb = hexToRgb(colorHex)
+    const radius = parseInt(document.getElementById("r").value)
+    // const width = parseInt(document.getElementById("width").value)
+    // const height = parseInt(document.getElementById("height").value)
+    if (center) {
+        x = center.position.x
+        y = center.position.y
+    }
+    const circle = {
+        type: CIRCLE,
+        position: {x, y},
+        dimensions: {radius},
+        color: colorRgb
+    }
+    shapes.push(circle)
+    render()
+}
