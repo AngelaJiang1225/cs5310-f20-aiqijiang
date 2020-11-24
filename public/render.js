@@ -1,3 +1,43 @@
+const drawScene = (gl, parameters, buffers) => {
+    clearScene(gl);
+    const projectionMatrix = createProjectionMatrix(gl);
+    const modelViewMatrix = glMatrix.mat4.create();
+
+    glMatrix.mat4.translate(
+        modelViewMatrix,
+        modelViewMatrix,
+        [-0.0, 0.0, -6.0]);
+    configurePositionBufferRead(gl, buffers, parameters);
+    gl.useProgram(parameters.program);
+    setUniforms(gl, parameters,
+        projectionMatrix, modelViewMatrix);
+    gl.drawArrays(gl.TRIANGLE_STRIP,
+        0, // offset
+        4); // vertexCount
+}
+
+const clearScene = (gl) => {
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearDepth(1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.clear(gl.COLOR_BUFFER_BIT
+        | gl.DEPTH_BUFFER_BIT);
+}
+
+const createProjectionMatrix = (gl) => {
+    const fieldOfView = 45 * Math.PI / 180;
+    const aspect = gl.canvas.clientWidth
+        / gl.canvas.clientHeight;
+    const zNear = 0.1;
+    const zFar = 100.0;
+    const projectionMatrix = glMatrix.mat4.create();
+
+    glMatrix.mat4.perspective(
+        projectionMatrix, fieldOfView,
+        aspect, zNear, zFar);
+    return projectionMatrix;
+}
 const configurePositionBufferRead =
     (gl, buffers, parameters) => {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
@@ -7,32 +47,12 @@ const configurePositionBufferRead =
             gl.FLOAT,
             false,
             0,
+
+
             0);
         gl.enableVertexAttribArray(
             parameters.attribLocations.vertexPosition);
     }
-
-const configureColorBufferRead
-    = (gl, buffers, parameters) =>   {
-    const numComponents = 4;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(
-        gl.ARRAY_BUFFER,
-        buffers.color);
-    gl.vertexAttribPointer(
-        parameters.attribLocations.vertexColor,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset);
-    gl.enableVertexAttribArray(
-        parameters.attribLocations.vertexColor);
-}
-
 const setUniforms = (gl, parameters, projectionMatrix, modelViewMatrix) => {
     gl.uniformMatrix4fv(
         parameters.uniformLocations.projectionMatrix,
@@ -44,60 +64,3 @@ const setUniforms = (gl, parameters, projectionMatrix, modelViewMatrix) => {
         modelViewMatrix);
 }
 
-const getProgramParameters = (gl, shaderProgram) => {
-    return {
-        program: shaderProgram,
-        attribLocations: {
-            vertexPosition: gl.getAttribLocation
-            (shaderProgram, 'aVertexPosition'),
-            vertexColor: gl.getAttribLocation
-            (shaderProgram, 'aVertexColor'),
-        },
-        uniformLocations: {
-            projectionMatrix: gl.getUniformLocation
-            (shaderProgram, 'uProjectionMatrix'),
-            modelViewMatrix: gl.getUniformLocation
-            (shaderProgram, 'uModelViewMatrix'),
-        },
-    };
-}
-
-
-// pull positions from position buffer
-
-// into vertexPosition attribute
-// pull out 2 values per iteration
-// data in buffer is 32bit floats
-// don't normalize
-// how many bytes to get from one set
-// of values to the next
-// 0 = use same as above, e.g., 2
-// bytes to start from (offset)
-
-
-// 45 degrees field of view
-// aspect ration matching canvas size
-
-// render objects between 0.1 units
-// and 100 units away from camera
-// create an identity matrix to get started
-
-// create a perspective matrix that
-// distorts vertices based on distance
-
-
-
-
-// clear the scene
-// create a projection matrix
-// set drawing position to "identity" point, e.g.,
-// center of the scene
-// move drawing position -6 in Z
-
-
-
-// configure how to consume position buffer
-// use our program when drawing
-// send uniforms to GLSL program
-
-// draw the square
